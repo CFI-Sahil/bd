@@ -1,14 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Music, Disc3, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Heart, Music, Disc3, Play, Pause, Volume2, VolumeX, Sparkles, RotateCcw, RotateCw } from 'lucide-react';
 import songSrc from '../assets/song.mp3';
+import { SONG_LYRICS } from '../data/lyrics';
 
 export const VinylRecord = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(197.37);
   const audioRef = useRef(null);
 
   const musicNotes = ['♪', '♫', '♩', '♬', '♥'];
+
+  // Calculate the currently active lyric line based on playback time
+  const currentLyricIndex = SONG_LYRICS.reduce((lastIdx, item, idx) => {
+    return item.time <= currentTime ? idx : lastIdx;
+  }, 0);
+  const currentLyric = SONG_LYRICS[currentLyricIndex];
 
   // Toggle Play / Pause
   const togglePlay = () => {
@@ -33,6 +42,31 @@ export const VinylRecord = () => {
     setIsMuted(!isMuted);
   };
 
+  // Skip time forward or backward by N seconds
+  const skipTime = (seconds) => {
+    if (!audioRef.current) return;
+    const newTime = Math.min(Math.max(audioRef.current.currentTime + seconds, 0), duration);
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  // Seek bar scrub handler
+  const handleSeek = (e) => {
+    const newTime = parseFloat(e.target.value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
+    setCurrentTime(newTime);
+  };
+
+  // Format seconds as m:ss
+  const formatTime = (secs) => {
+    if (isNaN(secs)) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
   // Pause audio when unmounted (e.g. moving between slides)
   useEffect(() => {
     const audio = audioRef.current;
@@ -43,6 +77,23 @@ export const VinylRecord = () => {
     };
   }, []);
 
+  // Smooth, real-time audio playback tracking using requestAnimationFrame
+  useEffect(() => {
+    let animId;
+    if (isPlaying && audioRef.current) {
+      const update = () => {
+        if (audioRef.current) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
+        animId = requestAnimationFrame(update);
+      };
+      animId = requestAnimationFrame(update);
+    }
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [isPlaying]);
+
   return (
     <div className="flex flex-col items-center mt-2 sm:mt-4 md:mt-6 w-full max-w-sm px-2">
       {/* Hidden Audio Element */}
@@ -51,7 +102,16 @@ export const VinylRecord = () => {
         src={songSrc} 
         preload="auto"
         loop
-        onEnded={() => setIsPlaying(false)}
+        onLoadedMetadata={(e) => {
+          if (e.target.duration && !isNaN(e.target.duration)) {
+            setDuration(e.target.duration);
+          }
+        }}
+        onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+        onEnded={() => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }}
       />
 
       <div className="relative flex justify-center items-center">
@@ -71,7 +131,7 @@ export const VinylRecord = () => {
           onClick={togglePlay}
           animate={{ rotate: isPlaying ? 360 : 0 }}
           transition={{ repeat: isPlaying ? Infinity : 0, duration: 3.5, ease: "linear" }}
-          className="w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-full bg-[#111] border-[5px] md:border-[6px] border-[#0a0a0a] shadow-2xl flex items-center justify-center cursor-pointer relative group transition-transform active:scale-98"
+          className="w-40 h-40 sm:w-52 sm:h-52 md:w-60 md:h-60 rounded-full bg-[#111] border-[5px] md:border-[6px] border-[#0a0a0a] shadow-2xl flex items-center justify-center cursor-pointer relative group transition-transform active:scale-98"
           title={isPlaying ? "Click to Pause" : "Click to Play"}
         >
           {/* Vinyl Grooves */}
@@ -141,42 +201,120 @@ export const VinylRecord = () => {
       </div>
 
       {/* Turntable Control Bar / Prompt */}
-      <div className="mt-4 sm:mt-5 flex flex-col items-center text-center w-full">
-        <button
-          type="button"
-          onClick={togglePlay}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-serif text-xs sm:text-sm transition-all shadow-lg border ${
-            isPlaying 
-              ? 'bg-rose-950/70 border-rose-400/40 text-pink-100' 
-              : 'bg-[#721c24] hover:bg-[#85232c] border-white/20 text-white animate-bounce'
-          }`}
-        >
-          {isPlaying ? (
-            <>
-              <Pause size={14} fill="currentColor" />
-              <span>Pause Music</span>
-            </>
-          ) : (
-            <>
-              <Play size={14} fill="currentColor" />
-              <span>Click to Play Track</span>
-            </>
-          )}
+      <div className="mt-3 sm:mt-4 flex flex-col items-center text-center w-full">
+        {/* Playback Controls with Skip -15s and +15s */}
+        <div className="flex items-center gap-2 sm:gap-3 justify-center">
+          <button
+            type="button"
+            onClick={() => skipTime(-15)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 hover:bg-black/60 text-pink-100 text-[11px] sm:text-xs font-serif transition-all active:scale-95 border border-white/15 shadow-sm"
+            title="Rewind 15 seconds"
+          >
+            <RotateCcw size={12} />
+            <span>-15s</span>
+          </button>
 
-          {/* Equalizer Wave Bars */}
-          {isPlaying && (
-            <div className="flex items-end gap-0.5 h-3 ml-1">
-              <span className="w-0.5 bg-pink-200 h-2 animate-pulse" />
-              <span className="w-0.5 bg-pink-300 h-3 animate-ping" />
-              <span className="w-0.5 bg-pink-200 h-1.5 animate-pulse" />
-            </div>
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={togglePlay}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-serif text-xs sm:text-sm transition-all shadow-lg border ${
+              isPlaying 
+                ? 'bg-rose-950/70 border-rose-400/40 text-pink-100' 
+                : 'bg-[#721c24] hover:bg-[#85232c] border-white/20 text-white animate-bounce'
+            }`}
+          >
+            {isPlaying ? (
+              <>
+                <Pause size={14} fill="currentColor" />
+                <span>Pause Music</span>
+              </>
+            ) : (
+              <>
+                <Play size={14} fill="currentColor" />
+                <span>Click to Play Track</span>
+              </>
+            )}
+
+            {/* Equalizer Wave Bars */}
+            {isPlaying && (
+              <div className="flex items-end gap-0.5 h-3 ml-1">
+                <span className="w-0.5 bg-pink-200 h-2 animate-pulse" />
+                <span className="w-0.5 bg-pink-300 h-3 animate-ping" />
+                <span className="w-0.5 bg-pink-200 h-1.5 animate-pulse" />
+              </div>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => skipTime(15)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/40 hover:bg-black/60 text-pink-100 text-[11px] sm:text-xs font-serif transition-all active:scale-95 border border-white/15 shadow-sm"
+            title="Skip forward 15 seconds"
+          >
+            <span>+15s</span>
+            <RotateCw size={12} />
+          </button>
+        </div>
+
+        {/* Interactive Timeline Scrubber to jump anywhere in the song */}
+        <div className="w-full max-w-[280px] sm:max-w-xs flex items-center gap-2 mt-2 px-1">
+          <span className="text-[10px] font-mono text-pink-200/80 w-7 text-right select-none">
+            {formatTime(currentTime)}
+          </span>
+          <input
+            type="range"
+            min="0"
+            max={duration || 197}
+            step="0.5"
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-1.5 bg-rose-950/70 rounded-lg appearance-none cursor-pointer accent-pink-300 transition-all hover:h-2"
+            title="Drag or click to jump anywhere in the song"
+          />
+          <span className="text-[10px] font-mono text-pink-200/80 w-7 text-left select-none">
+            {formatTime(duration)}
+          </span>
+        </div>
+
+        {/* Synchronized Flowing Lyrics Box - Locked strictly to active line until next line arrives */}
+        <div className="w-full max-w-[320px] sm:max-w-sm mt-2.5 px-3.5 py-2 rounded-2xl bg-black/45 backdrop-blur-md border border-rose-300/25 shadow-xl min-h-[52px] sm:min-h-[58px] flex items-center justify-center relative overflow-hidden">
+          <AnimatePresence mode="wait">
+            {isPlaying ? (
+              <motion.div
+                key={currentLyricIndex}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="flex items-center justify-center gap-2 text-center w-full px-2"
+              >
+                <Music size={13} className="text-pink-300 shrink-0 animate-pulse" />
+                <p className="text-xs sm:text-sm font-serif italic text-pink-100 font-semibold tracking-wide leading-snug drop-shadow-md">
+                  "{currentLyric?.text}"
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="paused-prompt"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="flex items-center justify-center gap-1.5 text-center px-2 text-pink-100/75"
+              >
+                <Sparkles size={13} className="text-pink-300/80 shrink-0" />
+                <span className="text-[11px] sm:text-xs font-serif italic tracking-wide">
+                  {currentTime > 0 ? "Music paused — click Play to resume lyrics" : "Click to Play Track to watch lyrics sing along"}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <div className="flex items-center gap-2 mt-2 text-white/80">
           <Disc3 size={14} className={`text-pink-300 shrink-0 ${isPlaying ? 'animate-spin' : ''}`} />
           <span className="text-[11px] sm:text-xs font-serif italic tracking-wide">
-            {isPlaying ? "Now Playing: A Song That Reminds Me of You ♪" : "Click anywhere on the CD or button to start"}
+            {isPlaying ? "Now Playing: Mishri - Anuv Jain ♪" : "Click anywhere on the CD or button to start"}
           </span>
           <button 
             type="button" 
