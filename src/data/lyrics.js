@@ -26,19 +26,19 @@ export const SONG_LYRICS = [
   { time: 122.0, text: "Aur mishri ke in badalon mein" },
   { time: 127.5, text: "Tu aaj bhi kahin pe chipa hai" },
 
-  // --- Instrumental Break ---
-  { time: 134.0, text: "♫ Instrumental guitar break... ♪" },
+  // --- Instrumental Break (2:15 - 2:27) ---
+  { time: 135.0, text: "♫ Instrumental guitar break... ♪" },
 
-  // --- Verse 3 & Outro ---
-  { time: 140.8, text: "Tu neendon mein, band aankhon mein" },
-  { time: 147.0, text: "Yun haule-haule ladti-jhagadti hai" },
-  { time: 153.5, text: "Na jaane kyun phir aake tu" },
-  { time: 160.0, text: "Mujhe hi jaana kas ke pakadti hai" },
-  { time: 167.0, text: "Tera, tera hi" },
-  { time: 172.5, text: "Main ho gaya hoon sone ke mahalon mein" },
-  { time: 180.0, text: "Tera, tera hi" },
-  { time: 185.5, text: "Main ho gaya hoon mitti ke shehron mein" },
-  { time: 193.0, text: "♫ Melody fades out... ♪" }
+  // --- Verse 3 & Outro (Starts at 2:27 / 147.0s) ---
+  { time: 147.0, text: "Tu neendon mein, band aankhon mein" },
+  { time: 153.5, text: "Yun haule-haule ladti-jhagadti hai" },
+  { time: 160.0, text: "Na jaane kyun phir aake tu" },
+  { time: 166.5, text: "Mujhe hi jaana kas ke pakadti hai" },
+  { time: 173.0, text: "Tera, tera hi" },
+  { time: 178.5, text: "Main ho gaya hoon sone ke mahalon mein" },
+  { time: 185.0, text: "Tera, tera hi" },
+  { time: 189.5, text: "Main ho gaya hoon mitti ke shehron mein" },
+  { time: 194.0, text: "♫ Melody fades out... ♪" }
 ];
 
 export default SONG_LYRICS;
